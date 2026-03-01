@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Voûtix — Partagez. En toute sécurité.</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#06080f;
+  --bg2:#0c1018;
+  --bg3:#111620;
+  --border:#1a2235;
+  --accent:#3dffa0;
+  --accent2:#4a9eff;
+  --accent3:#ff6b6b;
+  --text:#e8eeff;
+  --muted:#4a5568;
+  --mutedLight:#718096;
+  --mono:'DM Mono',monospace;
+  --serif:'Instrument Serif',serif;
+  --sans:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden;}
+
+/* NOISE OVERLAY */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(26,34,53,0.6);backdrop-filter:blur(20px);background:rgba(6,8,15,0.7);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.logo-text{font-weight:800;font-size:18px;letter-spacing:-0.02em;}
+.logo-sub{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:0.1em;}
+.nav-links{display:flex;gap:32px;}
+.nav-links a{color:var(--mutedLight);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s;}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{display:flex;gap:10px;align-items:center;}
+.btn{padding:10px 22px;border-radius:9px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;border:none;transition:all 0.2s;}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--mutedLight);}
+.btn-primary{background:var(--accent);color:#06080f;}
+.btn-primary:hover{background:#5fffc0;transform:translateY(-1px);box-shadow:0 8px 24px rgba(61,255,160,0.25);}
+.btn-lg{padding:14px 32px;font-size:16px;border-radius:12px;}
+
+/* HERO */
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;overflow:hidden;}
+.hero-glow{position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(61,255,160,0.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none;}
+.hero-glow2{position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(74,158,255,0.06) 0%,transparent 70%);top:40%;right:15%;pointer-events:none;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:100px;border:1px solid rgba(61,255,160,0.3);background:rgba(61,255,160,0.06);font-size:12px;font-weight:600;color:var(--accent);margin-bottom:28px;font-family:var(--mono);letter-spacing:0.05em;}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.hero h1{font-family:var(--serif);font-size:clamp(48px,7vw,90px);line-height:1.05;letter-spacing:-0.02em;margin-bottom:24px;font-weight:400;}
+.hero h1 em{font-style:italic;color:var(--accent);}
+.hero p{font-size:clamp(16px,2vw,20px);color:var(--mutedLight);max-width:580px;line-height:1.7;margin-bottom:40px;font-weight:400;}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:60px;}
+.hero-stats{display:flex;gap:48px;justify-content:center;flex-wrap:wrap;}
+.stat{text-align:center;}
+.stat-num{font-size:28px;font-weight:800;font-family:var(--mono);color:var(--text);margin-bottom:4px;}
+.stat-num span{color:var(--accent);}
+.stat-label{font-size:12px;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;font-weight:600;}
+
+/* MARQUEE */
+.marquee-wrap{padding:20px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;margin:0;}
+.marquee{display:flex;gap:48px;animation:marquee 20s linear infinite;white-space:nowrap;}
+.marquee-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:0.04em;flex-shrink:0;}
+.marquee-item span{color:var(--accent);font-size:16px;}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTIONS */
+section{position:relative;z-index:1;padding:100px 24px;}
+.container{max-width:1100px;margin:0 auto;}
+.section-label{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:0.15em;text-transform:uppercase;font-weight:500;margin-bottom:14px;}
+.section-title{font-family:var(--serif);font-size:clamp(32px,4vw,52px);line-height:1.1;margin-bottom:16px;font-weight:400;}
+.section-title em{font-style:italic;color:var(--accent);}
+.section-sub{font-size:17px;color:var(--mutedLight);max-width:500px;line-height:1.7;}
+
+/* FEATURES */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:56px;}
+.feature-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;transition:all 0.25s;position:relative;overflow:hidden;}
+.feature-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(61,255,160,0.03),transparent);opacity:0;transition:opacity 0.3s;}
+.feature-card:hover{border-color:rgba(61,255,160,0.3);transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.3);}
+.feature-card:hover::before{opacity:1;}
+.feature-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px;}
+.feature-card h3{font-weight:700;font-size:17px;margin-bottom:10px;letter-spacing:-0.01em;}
+.feature-card p{font-size:14px;color:var(--mutedLight);line-height:1.7;}
+.feature-tag{display:inline-block;margin-top:14px;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--mono);letter-spacing:0.05em;}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-top:56px;position:relative;}
+.steps::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);pointer-events:none;}
+.step{text-align:center;padding:28px 20px;}
+.step-num{width:56px;height:56px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:20px;color:var(--accent);margin:0 auto 20px;}
+.step h3{font-weight:700;font-size:16px;margin-bottom:10px;}
+.step p{font-size:13px;color:var(--mutedLight);line-height:1.6;}
+
+/* DEPARTMENTS */
+.dept-showcase{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:56px;}
+.dept-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;align-items:center;gap:16px;transition:all 0.2s;}
+.dept-card:hover{border-color:var(--border);transform:translateX(4px);}
+.dept-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.dept-card h4{font-weight:700;font-size:15px;margin-bottom:4px;}
+.dept-card p{font-size:13px;color:var(--mutedLight);}
+.dept-badge{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--mono);}
+
+/* SECURITY SECTION */
+.security-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:56px;align-items:center;}
+.security-list{display:flex;flex-direction:column;gap:12px;}
+.sec-item{display:flex;align-items:flex-start;gap:14px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;}
+.sec-check{width:28px;height:28px;border-radius:8px;background:rgba(61,255,160,0.1);border:1px solid rgba(61,255,160,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px;}
+.sec-item h4{font-weight:700;font-size:14px;margin-bottom:3px;}
+.sec-item p{font-size:12px;color:var(--mutedLight);line-height:1.5;}
+.terminal{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:24px;font-family:var(--mono);font-size:12px;line-height:1.8;}
+.terminal-header{display:flex;gap:6px;margin-bottom:20px;}
+.t-dot{width:10px;height:10px;border-radius:50%;}
+.t-green{background:#3dffa0;} .t-yellow{background:#ffaa00;} .t-red{background:#ff4757;}
+.t-line{color:var(--mutedLight);}
+.t-cmd{color:var(--accent2);}
+.t-val{color:var(--accent);}
+.t-comment{color:var(--muted);}
+.t-warn{color:var(--accent3);}
+.t-cursor{display:inline-block;width:8px;height:14px;background:var(--accent);animation:blink 1s infinite;vertical-align:middle;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* PRICING */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:56px;}
+.plan{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;transition:all 0.25s;}
+.plan.featured{border-color:var(--accent);background:linear-gradient(160deg,rgba(61,255,160,0.05),var(--bg2));}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:100px;background:var(--accent);color:#06080f;font-size:11px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;}
+.plan-name{font-weight:800;font-size:18px;margin-bottom:8px;}
+.plan-price{font-family:var(--mono);font-size:36px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.plan-price sup{font-size:18px;color:var(--muted);}
+.plan-price span{font-size:14px;color:var(--muted);font-weight:400;}
+.plan-desc{font-size:13px;color:var(--mutedLight);margin-bottom:24px;line-height:1.5;}
+.plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+.plan-feat{display:flex;align-items:center;gap:10px;font-size:13px;}
+.plan-feat .ck{color:var(--accent);font-size:14px;flex-shrink:0;}
+.plan-feat .cx{color:var(--muted);font-size:14px;flex-shrink:0;}
+
+/* CTA */
+.cta-section{padding:100px 24px;text-align:center;position:relative;overflow:hidden;}
+.cta-glow{position:absolute;width:800px;height:400px;background:radial-gradient(ellipse,rgba(61,255,160,0.06) 0%,transparent 70%);left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.cta-section h2{font-family:var(--serif);font-size:clamp(36px,5vw,64px);line-height:1.1;margin-bottom:20px;font-weight:400;}
+.cta-section h2 em{font-style:italic;color:var(--accent);}
+.cta-section p{font-size:18px;color:var(--mutedLight);margin-bottom:40px;}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:48px 24px;background:var(--bg2);}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.footer-copy{font-size:13px;color:var(--muted);}
+.footer-links{display:flex;gap:24px;}
+.footer-links a{font-size:13px;color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.footer-links a:hover{color:var(--text);}
+
+/* ANIMATIONS */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity 0.6s ease,transform 0.6s ease;}
+.fade-up.visible{opacity:1;transform:translateY(0);}
+
+/* MOBILE */
+@media(max-width:768px){
+  nav{padding:0 20px;}
+  .nav-links{display:none;}
+  .security-grid,.dept-showcase,.pricing-grid{grid-template-columns:1fr;}
+  .steps::before{display:none;}
+  .hero-stats{gap:28px;}
+  .footer-inner{flex-direction:column;text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-icon">🔐</div>
+    <div>
+      <div class="logo-text">Voûtix</div>
+      <div class="logo-sub">ENTERPRISE</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="#features">Fonctionnalités</a>
+    <a href="#security">Sécurité</a>
+    <a href="#departments">Départements</a>
+    <a href="#pricing">Tarifs</a>
+  </div>
+  <div class="nav-cta" id="nav-cta">
+    <button class="btn btn-ghost" onclick="openAuth('login')">Se connecter</button>
+    <button class="btn btn-primary" onclick="openAuth('register')">Commencer gratuitement</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    Chiffrement AES-256-GCM · Détection IA en temps réel
+  </div>
+  <h1>Partagez vos fichiers.<br/><em>En toute confiance.</em></h1>
+  <p>La plateforme de partage sécurisé conçue pour les entreprises qui protègent leurs données — avec chiffrement de bout en bout, liens temporaires et surveillance IA 24/7.</p>
+  <div class="hero-btns">
+    <button class="btn btn-primary btn-lg" onclick="openAuth('register')">Démarrer gratuitement →</button>
+    <button class="btn btn-ghost btn-lg" onclick="openAuth('login')">Se connecter</button>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num"><span>99.9</span>%</div><div class="stat-label">Disponibilité</div></div>
+    <div class="stat"><div class="stat-num"><span>256</span>-bit</div><div class="stat-label">Chiffrement</div></div>
+    <div class="stat"><div class="stat-num"><span>197</span></div><div class="stat-label">Pays couverts</div></div>
+    <div class="stat"><div class="stat-num">&lt;<span>180</span>ms</div><div class="stat-label">Analyse IA</div></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee" id="marquee">
+    <div class="marquee-item"><span>🔒</span> Chiffrement AES-256-GCM</div>
+    <div class="marquee-item"><span>⏱</span> Liens à durée limitée</div>
+    <div class="marquee-item"><span>🤖</span> Détection d'anomalies IA</div>
+    <div class="marquee-item"><span>🌍</span> Carte mondiale des accès</div>
+    <div class="marquee-item"><span>🔑</span> Authentification 2FA</div>
+    <div class="marquee-item"><span>🏢</span> Gestion par départements</div>
+    <div class="marquee-item"><span>📋</span> Modèles préconfigurés</div>
+    <div class="marquee-item"><span>📊</span> Rapports d'activité</div>
+    <div class="marquee-item"><span>🔒</span> Chiffrement AES-256-GCM</div>
+    <div class="marquee-item"><span>⏱</span> Liens à durée limitée</div>
+    <div class="marquee-item"><span>🤖</span> Détection d'anomalies IA</div>
+    <div class="marquee-item"><span>🌍</span> Carte mondiale des accès</div>
+    <div class="marquee-item"><span>🔑</span> Authentification 2FA</div>
+    <div class="marquee-item"><span>🏢</span> Gestion par départements</div>
+    <div class="marquee-item"><span>📋</span> Modèles préconfigurés</div>
+    <div class="marquee-item"><span>📊</span> Rapports d'activité</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="fade-up">
+      <div class="section-label">Fonctionnalités</div>
+      <h2 class="section-title">Tout ce dont vous avez besoin<br/>pour partager <em>sans risque</em></h2>
+      <p class="section-sub">Une suite complète d'outils de sécurité, pensée pour les équipes modernes.</p>
+    </div>
+    <div class="features-grid fade-up">
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(61,255,160,0.1);border:1px solid rgba(61,255,160,0.2);">🔒</div>
+        <h3>Chiffrement bout en bout</h3>
+        <p>Chaque fichier est chiffré avec AES-256-GCM avant d'être envoyé. Vos données ne transitent jamais en clair — même nous ne pouvons pas les lire.</p>
+        <div class="feature-tag" style="background:rgba(61,255,160,0.1);color:var(--accent);border:1px solid rgba(61,255,160,0.2);">AES-256-GCM · Zero-knowledge</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);">⏱</div>
+        <h3>Liens temporaires intelligents</h3>
+        <p>Définissez une durée d'expiration (1h à 14 jours) et un nombre maximum de téléchargements. Le lien s'autodétruit automatiquement.</p>
+        <div class="feature-tag" style="background:rgba(74,158,255,0.1);color:var(--accent2);border:1px solid rgba(74,158,255,0.2);">Expiration automatique</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);">🤖</div>
+        <h3>Détection d'anomalies par IA</h3>
+        <p>Notre modèle SecureNet-4B analyse chaque accès en moins de 180ms. Géolocalisation suspecte, volume anormal, comportements inhabituels — alerté instantanément.</p>
+        <div class="feature-tag" style="background:rgba(255,107,107,0.1);color:var(--accent3);border:1px solid rgba(255,107,107,0.2);">SecureNet-4B · 2 847 signatures</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(61,255,160,0.1);border:1px solid rgba(61,255,160,0.2);">🔑</div>
+        <h3>Authentification 2FA</h3>
+        <p>Chaque action critique — partage, révocation, accès à une clé — est protégée par un code TOTP (Google Authenticator, Authy). Aucun accès non autorisé possible.</p>
+        <div class="feature-tag" style="background:rgba(61,255,160,0.1);color:var(--accent);border:1px solid rgba(61,255,160,0.2);">TOTP · RFC 6238</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);">🌍</div>
+        <h3>Carte mondiale en temps réel</h3>
+        <p>Visualisez géographiquement chaque accès à vos fichiers. Les zones suspectes sont signalées instantanément avec pulsation visuelle et alerte.</p>
+        <div class="feature-tag" style="background:rgba(74,158,255,0.1);color:var(--accent2);border:1px solid rgba(74,158,255,0.2);">197 pays · Temps réel</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.2);">📊</div>
+        <h3>Rapports d'activité PDF</h3>
+        <p>Générez des rapports complets sur l'activité de vos partages : accès, téléchargements, alertes, statistiques par département — exportables en PDF.</p>
+        <div class="feature-tag" style="background:rgba(255,170,0,0.1);color:var(--warn);border:1px solid rgba(255,170,0,0.2);">Export PDF automatique</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="fade-up" style="text-align:center;">
+      <div class="section-label">Comment ça fonctionne</div>
+      <h2 class="section-title">Partagez en <em>3 étapes</em></h2>
+    </div>
+    <div class="steps fade-up">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Déposez votre fichier</h3>
+        <p>Glissez-déposez n'importe quel fichier. Choisissez un modèle (RH, Juridique, Finance…) ou configurez manuellement.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Configurez la sécurité</h3>
+        <p>Définissez la durée, le nombre de téléchargements, le département concerné. Le chiffrement est automatique.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Confirmez avec le 2FA</h3>
+        <p>Validez l'opération avec votre code d'authentification. Le lien sécurisé est prêt à être partagé.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>Surveillez les accès</h3>
+        <p>L'IA monitore chaque accès en temps réel. Vous êtes alerté immédiatement en cas d'activité suspecte.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPARTMENTS -->
+<section id="departments">
+  <div class="container">
+    <div class="fade-up">
+      <div class="section-label">Départements</div>
+      <h2 class="section-title">Organisé pour <em>toute votre entreprise</em></h2>
+      <p class="section-sub">Créez des espaces de partage distincts pour chaque équipe — interne ou externe.</p>
+    </div>
+    <div class="dept-showcase fade-up">
+      <div class="dept-card">
+        <div class="dept-icon" style="background:rgba(61,255,160,0.1);">👥</div>
+        <div>
+          <h4>Ressources Humaines</h4>
+          <p>Contrats, évaluations, onboarding — partagez en toute confidentialité avec vos équipes RH.</p>
+          <div class="dept-badge" style="background:rgba(61,255,160,0.1);color:var(--accent);border:1px solid rgba(61,255,160,0.3);">🏢 Interne</div>
+        </div>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background:rgba(74,158,255,0.1);">💼</div>
+        <div>
+          <h4>Finance & Comptabilité</h4>
+          <p>États financiers, bilans trimestriels — chiffrés et tracés avec expiration automatique.</p>
+          <div class="dept-badge" style="background:rgba(61,255,160,0.1);color:var(--accent);border:1px solid rgba(61,255,160,0.3);">🏢 Interne</div>
+        </div>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background:rgba(255,170,0,0.1);">⚖️</div>
+        <div>
+          <h4>Juridique</h4>
+          <p>NDAs, procédures légales, accords — contrôle strict des accès et traçabilité complète.</p>
+          <div class="dept-badge" style="background:rgba(61,255,160,0.1);color:var(--accent);border:1px solid rgba(61,255,160,0.3);">🏢 Interne</div>
+        </div>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background:rgba(255,107,155,0.1);">🌐</div>
+        <div>
+          <h4>Partenaires Externes</h4>
+          <p>Collaborez avec vos partenaires inter-entreprise sans compromettre la sécurité de vos données.</p>
+          <div class="dept-badge" style="background:rgba(74,158,255,0.1);color:var(--accent2);border:1px solid rgba(74,158,255,0.3);">🌐 Externe</div>
+        </div>
+      </div>
+      <div class="dept-card">
+        <div class="dept-icon" style="background:rgba(167,139,250,0.1);">⭐</div>
+        <div>
+          <h4>Clients Premium</h4>
+          <p>Livrables, présentations, rapports — une expérience de partage professionnelle pour vos meilleurs clients.</p>
+          <div class="dept-badge" style="background:rgba(74,158,255,0.1);color:var(--accent2);border:1px solid rgba(74,158,255,0.3);">🌐 Externe</div>
+        </div>
+      </div>
+      <div class="dept-card" style="border-style:dashed;cursor:pointer;justify-content:center;text-align:center;">
+        <div>
+          <div style="font-size:28px;margin-bottom:8px;">+</div>
+          <h4>Créez votre département</h4>
+          <p>Configurez vos propres espaces avec règles, membres et modèles personnalisés.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="fade-up">
+      <div class="section-label">Sécurité</div>
+      <h2 class="section-title">Une sécurité de <em>niveau bancaire</em></h2>
+    </div>
+    <div class="security-grid fade-up">
+      <div class="security-list">
+        <div class="sec-item">
+          <div class="sec-check">✓</div>
+          <div><h4>AES-256-GCM</h4><p>Le standard de chiffrement militaire, avec clé unique générée par fichier. Impossible à décrypter sans la clé.</p></div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-check">✓</div>
+          <div><h4>Dérivation PBKDF2 / SHA-512</h4><p>Les clés sont dérivées avec 200 000 itérations pour résister aux attaques par force brute.</p></div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-check">✓</div>
+          <div><h4>Transport TLS 1.3</h4><p>Chaque requête est chiffrée en transit avec la dernière version du protocole TLS.</p></div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-check">✓</div>
+          <div><h4>Architecture Zero-knowledge</h4><p>Nos serveurs ne stockent jamais vos clés de chiffrement. Seul vous y avez accès.</p></div>
+        </div>
+        <div class="sec-item">
+          <div class="sec-check">✓</div>
+          <div><h4>TOTP 2FA (RFC 6238)</h4><p>Authentification à deux facteurs compatible Google Authenticator, Authy, et toutes apps TOTP.</p></div>
+        </div>
+      </div>
+      <div class="terminal">
+        <div class="terminal-header">
+          <div class="t-dot t-red"></div>
+          <div class="t-dot t-yellow"></div>
+          <div class="t-dot t-green"></div>
+        </div>
+        <div class="t-line"><span class="t-comment">// Journal de sécurité en temps réel</span></div>
+        <div class="t-line">&nbsp;</div>
+        <div class="t-line"><span class="t-cmd">→</span> Fichier reçu: <span class="t-val">rapport_Q4.pdf</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> Chiffrement: <span class="t-val">AES-256-GCM</span> ✓</div>
+        <div class="t-line"><span class="t-cmd">→</span> Clé générée: <span class="t-val">a3f9b2c1d4e5...</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> 2FA validé: <span class="t-val">TOTP OK</span> ✓</div>
+        <div class="t-line"><span class="t-cmd">→</span> Lien créé: <span class="t-val">expires in 24h</span></div>
+        <div class="t-line">&nbsp;</div>
+        <div class="t-line"><span class="t-comment">// Accès détecté</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> IP: <span class="t-val">203.0.113.42</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> Localisation: <span class="t-warn">Tokyo, JP ⚠</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> Score IA: <span class="t-warn">0.94 — SUSPECT</span></div>
+        <div class="t-line"><span class="t-cmd">→</span> Alerte envoyée: <span class="t-val"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="442520292d2a04272b36346a272b29">[email&#160;protected]</a></span></div>
+        <div class="t-line">&nbsp;</div>
+        <div class="t-line"><span class="t-cmd">$</span> <div class="t-cursor"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="container">
+    <div class="fade-up" style="text-align:center;">
+      <div class="section-label">Tarifs</div>
+      <h2 class="section-title">Simple et <em>transparent</em></h2>
+      <p class="section-sub" style="margin:0 auto;">Commencez gratuitement, évoluez selon vos besoins.</p>
+    </div>
+    <div class="pricing-grid fade-up">
+
+      <div class="plan">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><sup>$</sup>0<span>/mois</span></div>
+        <div class="plan-desc">Pour tester Voûtix et les partages occasionnels.</div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="ck">✓</span> 5 fichiers actifs</div>
+          <div class="plan-feat"><span class="ck">✓</span> Chiffrement AES-256</div>
+          <div class="plan-feat"><span class="ck">✓</span> Liens 24h max</div>
+          <div class="plan-feat"><span class="ck">✓</span> 1 département</div>
+          <div class="plan-feat"><span class="cx">✗</span> Détection IA</div>
+          <div class="plan-feat"><span class="cx">✗</span> Carte mondiale</div>
+          <div class="plan-feat"><span class="cx">✗</span> Rapports PDF</div>
+        </div>
+        <button class="btn btn-ghost" style="width:100%;padding:12px;" onclick="openAuth('register')">Commencer →</button>
+      </div>
+
+      <div class="plan featured">
+        <div class="plan-badge">⭐ POPULAIRE</div>
+        <div class="plan-name">Business</div>
+        <div class="plan-price"><sup>$</sup>29<span>/mois</span></div>
+        <div class="plan-desc">Pour les équipes qui partagent des données sensibles au quotidien.</div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="ck">✓</span> Fichiers illimités</div>
+          <div class="plan-feat"><span class="ck">✓</span> Chiffrement AES-256-GCM</div>
+          <div class="plan-feat"><span class="ck">✓</span> Liens jusqu'à 14 jours</div>
+          <div class="plan-feat"><span class="ck">✓</span> 10 départements</div>
+          <div class="plan-feat"><span class="ck">✓</span> Détection IA</div>
+          <div class="plan-feat"><span class="ck">✓</span> Carte mondiale</div>
+          <div class="plan-feat"><span class="ck">✓</span> Authentification 2FA</div>
+          <div class="plan-feat"><span class="cx">✗</span> Rapports PDF</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="openAuth('register')">Essai 14 jours gratuit →</button>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price"><sup>$</sup>99<span>/mois</span></div>
+        <div class="plan-desc">Pour les grandes entreprises avec besoins de conformité avancés.</div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="ck">✓</span> Tout Business inclus</div>
+          <div class="plan-feat"><span class="ck">✓</span> Départements illimités</div>
+          <div class="plan-feat"><span class="ck">✓</span> Rapports PDF automatiques</div>
+          <div class="plan-feat"><span class="ck">✓</span> SSO / SAML 2.0</div>
+          <div class="plan-feat"><span class="ck">✓</span> Accès inter-entreprise</div>
+          <div class="plan-feat"><span class="ck">✓</span> SLA 99.9% garanti</div>
+          <div class="plan-feat"><span class="ck">✓</span> Support prioritaire 24/7</div>
+        </div>
+        <button class="btn btn-ghost" style="width:100%;padding:12px;">Contacter l'équipe →</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div style="position:relative;z-index:1;">
+    <div class="section-label" style="margin-bottom:16px;">Prêt à sécuriser vos partages ?</div>
+    <h2>Commencez <em>gratuitement</em><br/>dès aujourd'hui.</h2>
+    <p>Aucune carte de crédit requise. Configuration en moins de 2 minutes.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-lg" onclick="openAuth('register')">Créer mon compte →</button>
+      <button class="btn btn-ghost btn-lg" onclick="openAuth('login')">Se connecter</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon" style="width:28px;height:28px;font-size:14px;">🔐</div>
+        <span style="font-weight:800;font-size:15px;">Voûtix</span>
+      </div>
+      <div class="footer-copy">© 2025 Voûtix. Tous droits réservés.</div>
+    </div>
+    <div class="footer-links">
+      <a href="#">Confidentialité</a>
+      <a href="#">Conditions</a>
+      <a href="#">Sécurité</a>
+      <a href="#">Documentation</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(
+  'https://roxscufmzlsfalkmwvrd.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJveHNjdWZtemxzZmFsa213dnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMDMzNzMsImV4cCI6MjA4Nzg3OTM3M30.srloz63U_OwdRWlz_mHGYLPvM22k3Xt5HMdpuAtEyd4'
+);
+
+// ── AUTH MODAL STYLES ─────────────────────────────────────────────────────────
+const modalCSS = `
+  #auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn 0.2s ease;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  #auth-box{background:#0c1018;border:1px solid #1a2235;border-radius:20px;padding:40px;width:100%;max-width:420px;animation:popIn 0.25s ease;}
+  @keyframes popIn{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}
+  #auth-box .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px;}
+  #auth-box .auth-logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#3dffa0,#4a9eff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+  #auth-box .auth-logo-name{font-family:'Instrument Serif',serif;font-size:26px;font-style:italic;color:#e8eeff;}
+  #auth-box h2{font-weight:800;font-size:22px;text-align:center;margin-bottom:6px;color:#e8eeff;}
+  #auth-box .auth-sub{color:#718096;font-size:14px;text-align:center;margin-bottom:24px;}
+  #auth-box .field{margin-bottom:14px;}
+  #auth-box label{display:block;font-size:11px;color:#4a5568;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+  #auth-box input{width:100%;padding:11px 14px;border-radius:9px;border:1px solid #1a2235;background:#111620;color:#e8eeff;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s;}
+  #auth-box input:focus{border-color:#3dffa0;}
+  #auth-box .btn-auth{width:100%;padding:13px;border-radius:9px;border:none;background:#3dffa0;color:#06080f;font-weight:800;font-size:15px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;margin-top:6px;}
+  #auth-box .btn-auth:hover{background:#5fffc0;transform:translateY(-1px);}
+  #auth-box .btn-auth:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  #auth-box .auth-err{background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#ff4757;margin-bottom:14px;}
+  #auth-box .auth-ok{background:rgba(61,255,160,.1);border:1px solid rgba(61,255,160,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:#3dffa0;margin-bottom:14px;}
+  #auth-box .auth-switch{text-align:center;margin-top:18px;font-size:13px;color:#718096;}
+  #auth-box .auth-switch a{color:#3dffa0;text-decoration:none;font-weight:700;cursor:pointer;}
+  #auth-box .auth-close{position:absolute;top:16px;right:16px;background:none;border:none;color:#4a5568;font-size:24px;cursor:pointer;line-height:1;}
+  #auth-box{position:relative;}
+  .nav-user-btn{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9px;border:1px solid #1a2235;background:#111620;color:#e8eeff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+  .nav-user-btn:hover{border-color:#718096;}
+  .nav-user-avatar{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#3dffa0,#4a9eff);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#06080f;}
+  .dashboard-btn{background:#3dffa0;color:#06080f;border:none;padding:6px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+`;
+const styleEl = document.createElement('style');
+styleEl.textContent = modalCSS;
+document.head.appendChild(styleEl);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let authMode = 'login';
+
+// ── AUTH MODAL ────────────────────────────────────────────────────────────────
+function openAuth(mode = 'login') {
+  authMode = mode;
+  if (document.getElementById('auth-overlay')) return;
+  renderAuthModal();
+}
+
+function renderAuthModal() {
+  const isLogin = authMode === 'login';
+  const overlay = document.createElement('div');
+  overlay.id = 'auth-overlay';
+  overlay.innerHTML = `
+    <div id="auth-box">
+      <button class="auth-close" onclick="closeAuth()">×</button>
+      <div class="auth-logo">
+        <div class="auth-logo-icon">🔐</div>
+        <div class="auth-logo-name">Voûtix</div>
+      </div>
+      <div id="auth-msg"></div>
+      <h2>${isLogin ? 'Bon retour !' : 'Créer un compte'}</h2>
+      <div class="auth-sub">${isLogin ? 'Connectez-vous à votre espace Voûtix' : 'Rejoignez Voûtix gratuitement — sans carte de crédit'}</div>
+      ${!isLogin ? `<div class="field"><label>Nom complet</label><input id="a-name" type="text" placeholder="Jean Dupont" autocomplete="name"/></div>` : ''}
+      <div class="field"><label>Adresse email</label><input id="a-email" type="email" placeholder="vous@entreprise.com" autocomplete="email"/></div>
+      <div class="field"><label>Mot de passe</label><input id="a-pass" type="password" placeholder="••••••••" autocomplete="${isLogin ? 'current-password' : 'new-password'}"/></div>
+      <button class="btn-auth" id="a-submit">${isLogin ? 'Se connecter →' : 'Créer mon compte →'}</button>
+      <div class="auth-switch">
+        ${isLogin
+          ? `Pas encore de compte ? <a onclick="switchAuthMode('register')">Créer un compte</a>`
+          : `Déjà un compte ? <a onclick="switchAuthMode('login')">Se connecter</a>`}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Bindings
+  document.getElementById('a-submit').addEventListener('click', handleAuth);
+  document.getElementById('a-pass').addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeAuth(); });
+  setTimeout(() => document.getElementById(authMode === 'register' ? 'a-name' : 'a-email')?.focus(), 100);
+}
+
+function closeAuth() { document.getElementById('auth-overlay')?.remove(); }
+function switchAuthMode(mode) { authMode = mode; closeAuth(); renderAuthModal(); }
+
+function showMsg(msg, type = 'err') {
+  const el = document.getElementById('auth-msg');
+  if (el) el.innerHTML = `<div class="auth-${type}">${type === 'err' ? '⚠ ' : '✓ '}${msg}</div>`;
+}
+
+async function handleAuth() {
+  const email = document.getElementById('a-email')?.value?.trim();
+  const pass = document.getElementById('a-pass')?.value;
+  const btn = document.getElementById('a-submit');
+  if (!email || !pass) { showMsg('Email et mot de passe requis.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Chargement…';
+
+  if (authMode === 'login') {
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { showMsg(error.message); btn.disabled = false; btn.textContent = 'Se connecter →'; }
+  } else {
+    const name = document.getElementById('a-name')?.value?.trim();
+    const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name || email.split('@')[0] } } });
+    if (error) { showMsg(error.message); btn.disabled = false; btn.textContent = 'Créer mon compte →'; }
+    else { showMsg('Compte créé ! Vérifiez votre email pour confirmer votre inscription.', 'ok'); btn.textContent = 'Envoyé ✓'; }
+  }
+}
+
+// ── NAV UPDATE ────────────────────────────────────────────────────────────────
+function updateNav(user) {
+  const navCta = document.getElementById('nav-cta');
+  if (!navCta) return;
+  if (user) {
+    const initials = (user.user_metadata?.full_name || user.email)
+      .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    navCta.innerHTML = `
+      <button class="dashboard-btn" onclick="goToDashboard()">📁 Mon espace</button>
+      <button class="nav-user-btn" onclick="handleSignOut()">
+        <div class="nav-user-avatar">${initials}</div>
+        ${user.user_metadata?.full_name || user.email.split('@')[0]}
+        · Déconnexion
+      </button>`;
+  } else {
+    navCta.innerHTML = `
+      <button class="btn btn-ghost" onclick="openAuth('login')">Se connecter</button>
+      <button class="btn btn-primary" onclick="openAuth('register')">Commencer gratuitement</button>`;
+  }
+}
+
+function goToDashboard() {
+  // Redirige vers l'app Voûtix (même dossier)
+  window.location.href = 'voutix-supabase.html';
+}
+
+async function handleSignOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  updateNav(null);
+}
+
+// ── AUTH LISTENER ─────────────────────────────────────────────────────────────
+sb.auth.onAuthStateChange((event, session) => {
+  currentUser = session?.user || null;
+  updateNav(currentUser);
+  if (event === 'SIGNED_IN') {
+    closeAuth();
+    // Petite notif de bienvenue
+    const notif = document.createElement('div');
+    const name = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '';
+    notif.style.cssText = 'position:fixed;top:20px;right:20px;z-index:999;padding:12px 20px;border-radius:10px;background:#3dffa0;color:#06080f;font-weight:800;font-size:14px;font-family:DM Sans,sans-serif;box-shadow:0 8px 24px rgba(61,255,160,0.3);animation:slideIn 0.3s ease;';
+    notif.textContent = `✓ Bienvenue${name ? ', ' + name : ''} !`;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 3000);
+  }
+});
+
+// ── SCROLL ANIMATIONS ─────────────────────────────────────────────────────────
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  if (nav) nav.style.borderBottomColor = window.scrollY > 20 ? 'rgba(26,34,53,0.8)' : 'rgba(26,34,53,0.6)';
+});
+</script>
